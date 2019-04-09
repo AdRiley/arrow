@@ -19,6 +19,10 @@ if(CMAKE_VERSION VERSION_LESS 3.11)
   message(FATAL_ERROR "Building the Gandiva JNI bindings requires CMake version >= 3.11")
 endif()
 
+if(MSVC)
+  add_definitions(-DPROTOBUF_USE_DLLS)
+endif()
+
 # Find JNI
 find_package(JNI REQUIRED)
 
@@ -74,6 +78,7 @@ add_arrow_lib(gandiva_jni
               DEPENDENCIES
               gandiva_java
               gandiva_jni_proto
+              gandiva_jni_headers
               EXTRA_INCLUDES
               $<INSTALL_INTERFACE:include>
               $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>

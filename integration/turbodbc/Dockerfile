@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,28 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+FROM arrow:python-3.6
 
-source arrow/ci/travis_env_common.sh
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update -y -q && \
+    apt-get install -y -q --no-install-recommends \
+        odbc-postgresql \
+        postgresql \
+        sudo \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Builds arrow + gandiva and tests the same.
-pushd arrow/cpp
-  mkdir build
-  pushd build
-    CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Release \
-          -DARROW_GANDIVA=ON \
-          -DARROW_GANDIVA_JAVA=ON \
-          -DARROW_GANDIVA_STATIC_LIBSTDCPP=ON \
-          -DARROW_BUILD_TESTS=ON \
-          -DARROW_BUILD_UTILITIES=OFF \
-          -DARROW_BOOST_USE_SHARED=OFF"
+# install turbodbc dependencies from conda-forge
+RUN conda install -c conda-forge pybind11 pytest pytest-cov mock unixodbc && \
+    conda clean --all
 
-    if [ $TRAVIS_OS_NAME == "osx" ]; then
-      CMAKE_FLAGS="$CMAKE_FLAGS -DARROW_GFLAGS_USE_SHARED=OFF"
-    fi
+ENV TURBODBC_TEST_CONFIGURATION_FILES "query_fixtures_postgresql.json"
 
-    cmake $CMAKE_FLAGS ..
-    make -j4
-    ctest
-  popd
-popd
+# build and test
+CMD ["/bin/bash", "-c", "arrow/ci/docker_build_cpp.sh && \
+    arrow/ci/docker_build_python.sh && \
+    arrow/integration/turbodbc/runtest.sh"]
